@@ -2,80 +2,101 @@
 
 namespace App\Controller;
 
-use App\Entity\Repair;
-use App\Form\RepairForm;
-use App\Repository\RepairRepository;
+use App\Entity\RepairPart;
+use App\Form\RepairPartForm;
+use App\Repository\RepairPartRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
-#[Route('/repair')]
-final class RepairController extends AbstractController
+#[Route('/repair/part')]
+final class RepairPartController extends AbstractController
 {
-    #[Route(name: 'app_repair_index', methods: ['GET'])]
-    public function index(RepairRepository $repairRepository): Response
+    #[Route(name: 'app_repair_part_index', methods: ['GET'])]
+    public function index(Request $request, EntityManagerInterface $em): Response
     {
-        return $this->render('repair/index.html.twig', [
-            'repairs' => $repairRepository->findAll(),
+        $qb = $em->getRepository(RepairPart::class)->createQueryBuilder('rp');
+
+        if ($repairId = $request->query->get('repairId')) {
+            $qb->andWhere('rp.repair = :repairId')->setParameter('repairId', $repairId);
+        }
+        if ($partId = $request->query->get('partId')) {
+            $qb->andWhere('rp.part = :partId')->setParameter('partId', $partId);
+        }
+
+        $page = max(1, (int)$request->query->get('page', 1));
+        $limit = max(1, (int)$request->query->get('itemsPerPage', 10));
+
+        $query = $qb->getQuery();
+        $paginator = new \Doctrine\ORM\Tools\Pagination\Paginator($query);
+        $totalItems = count($paginator);
+        $query->setFirstResult(($page - 1) * $limit)->setMaxResults($limit);
+
+        return $this->render('repair_part/index.html.twig', [
+            'repairParts' => $query->getResult(),
+            'total' => $totalItems,
+            'page' => $page,
+            'itemsPerPage' => $limit,
+            'filters' => $request->query->all()
         ]);
     }
 
-    #[Route('/new', name: 'app_repair_new', methods: ['GET', 'POST'])]
+    #[Route('/new', name: 'app_repair_part_new', methods: ['GET', 'POST'])]
     public function new(Request $request, EntityManagerInterface $entityManager): Response
     {
-        $repair = new Repair();
-        $form = $this->createForm(RepairForm::class, $repair);
+        $repairPart = new RepairPart();
+        $form = $this->createForm(RepairPartForm::class, $repairPart);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $entityManager->persist($repair);
+            $entityManager->persist($repairPart);
             $entityManager->flush();
 
-            return $this->redirectToRoute('app_repair_index', [], Response::HTTP_SEE_OTHER);
+            return $this->redirectToRoute('app_repair_part_index', [], Response::HTTP_SEE_OTHER);
         }
 
-        return $this->render('repair/new.html.twig', [
-            'repair' => $repair,
+        return $this->render('repair_part/new.html.twig', [
+            'repair_part' => $repairPart,
             'form' => $form,
         ]);
     }
 
-    #[Route('/{id}', name: 'app_repair_show', methods: ['GET'])]
-    public function show(Repair $repair): Response
+    #[Route('/{id}', name: 'app_repair_part_show', methods: ['GET'])]
+    public function show(RepairPart $repairPart): Response
     {
-        return $this->render('repair/show.html.twig', [
-            'repair' => $repair,
+        return $this->render('repair_part/show.html.twig', [
+            'repair_part' => $repairPart,
         ]);
     }
 
-    #[Route('/{id}/edit', name: 'app_repair_edit', methods: ['GET', 'POST'])]
-    public function edit(Request $request, Repair $repair, EntityManagerInterface $entityManager): Response
+    #[Route('/{id}/edit', name: 'app_repair_part_edit', methods: ['GET', 'POST'])]
+    public function edit(Request $request, RepairPart $repairPart, EntityManagerInterface $entityManager): Response
     {
-        $form = $this->createForm(RepairForm::class, $repair);
+        $form = $this->createForm(RepairPartForm::class, $repairPart);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $entityManager->flush();
 
-            return $this->redirectToRoute('app_repair_index', [], Response::HTTP_SEE_OTHER);
+            return $this->redirectToRoute('app_repair_part_index', [], Response::HTTP_SEE_OTHER);
         }
 
-        return $this->render('repair/edit.html.twig', [
-            'repair' => $repair,
+        return $this->render('repair_part/edit.html.twig', [
+            'repair_part' => $repairPart,
             'form' => $form,
         ]);
     }
 
-    #[Route('/{id}', name: 'app_repair_delete', methods: ['POST'])]
-    public function delete(Request $request, Repair $repair, EntityManagerInterface $entityManager): Response
+    #[Route('/{id}', name: 'app_repair_part_delete', methods: ['POST'])]
+    public function delete(Request $request, RepairPart $repairPart, EntityManagerInterface $entityManager): Response
     {
-        if ($this->isCsrfTokenValid('delete'.$repair->getId(), $request->getPayload()->getString('_token'))) {
-            $entityManager->remove($repair);
+        if ($this->isCsrfTokenValid('delete'.$repairPart->getId(), $request->getPayload()->getString('_token'))) {
+            $entityManager->remove($repairPart);
             $entityManager->flush();
         }
 
-        return $this->redirectToRoute('app_repair_index', [], Response::HTTP_SEE_OTHER);
+        return $this->redirectToRoute('app_repair_part_index', [], Response::HTTP_SEE_OTHER);
     }
 }
