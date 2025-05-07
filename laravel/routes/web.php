@@ -1,17 +1,21 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
+use App\Http\Controllers\ClientController;
+use App\Http\Controllers\CarController;
+use App\Http\Controllers\PartController;
+use App\Http\Controllers\RepairController;
+use App\Http\Controllers\RepairPartController;
+    Route::get('/', function () {
+        return view('welcome');
+    });
+    Route::get('/test', [TestController::class, 'test']);
 
-Route::get('/', function () {
-    return Inertia::render('welcome');
-})->name('home');
+    Route::resource('clients', ClientController::class);
+    Route::resource('cars', CarController::class);
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('dashboard', function () {
-        return Inertia::render('dashboard');
-    })->name('dashboard');
-});
 
-require __DIR__.'/settings.php';
-require __DIR__.'/auth.php';
+    Route::resource('parts', PartController::class);
+    Route::resource('repairs', RepairController::class);
+
+    Route::resource('repairParts', RepairPartController::class);
