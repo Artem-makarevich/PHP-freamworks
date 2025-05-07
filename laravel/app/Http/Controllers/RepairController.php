@@ -1,0 +1,109 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Repair;
+use Illuminate\Http\Request;
+
+class RepairController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index(Request $request)
+    {
+        $repairs = Repair::all();
+        return view('repairs.index', compact('repairs'));
+        $itemsPerPage = $request->input('itemsPerPage', 10);
+
+        $query = \App\Models\Repair::query();
+
+        if ($request->filled('car_id')) {
+            $query->where('car_id', $request->car_id);
+        }
+        if ($request->filled('description')) {
+            $query->where('description', 'like', '%' . $request->description . '%');
+        }
+        if ($request->filled('date')) {
+            $query->whereDate('date', $request->date);
+        }
+
+        $repairs = $query->paginate($itemsPerPage)->appends($request->all());
+
+        return view('repairs.index', compact('repairs', 'itemsPerPage'));
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create()
+    {
+        return view('repairs.create');
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(Request $request)
+    {
+        // Валідація вхідних даних
+        $request->validate([
+            'client_id' => 'required|exists:clients,id',
+            'car_id' => 'required|exists:cars,id',
+            'description' => 'required|string',
+            'cost' => 'required|numeric|min:0',
+            'repair_date' => 'required|date',
+        ]);
+
+
+        Repair::create($request->all());
+
+        return redirect()->route('repairs.index')->with('success', 'Ремонт доданий!');
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(Repair $repair)
+    {
+        return view('repairs.show', compact('repair'));
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(Repair $repair)
+    {
+        return view('repairs.edit', compact('repair'));
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, Repair $repair)
+    {
+
+        $request->validate([
+            'client_id' => 'required|exists:clients,id',
+            'car_id' => 'required|exists:cars,id',
+            'description' => 'required|string',
+            'cost' => 'required|numeric|min:0',
+            'repair_date' => 'required|date',
+        ]);
+
+
+        $repair->update($request->all());
+
+        return redirect()->route('repairs.index')->with('success', 'Ремонт оновлений!');
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Repair $repair)
+    {
+        $repair->delete();
+
+        return redirect()->route('repairs.index')->with('success', 'Ремонт видалено!');
+    }
+}
